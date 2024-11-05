@@ -10,12 +10,32 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 BASE_API_URL = "https://localhost:5055/v1/api"
-ACCOUNT_ID = os.environ['IBKR_ACCOUNT_ID']
+ACCOUNT_ID = os.environ.get('IBKR_ACCOUNT_ID')
 
 os.environ['PYTHONHTTPSVERIFY'] = '0'
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Required for flash messages
+
+def check_auth():
+    """Check if user is authenticated with IBKR"""
+    try:
+        r = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
+        return r.status_code == 200 and r.content and 'error' not in r.json()
+    except:
+        return False
+
+def get_account_id():
+    """Get the first available account ID"""
+    try:
+        r = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
+        if r.status_code == 200 and r.content:
+            accounts = r.json()
+            if accounts and len(accounts) > 0:
+                return accounts[0]['id']
+    except:
+        pass
+    return ACCOUNT_ID
 
 @app.template_filter('ctime')
 def timectime(s):
@@ -30,7 +50,6 @@ def dashboard():
         return 'Make sure you authenticate first then visit this page. <a href="https://localhost:5055">Log in</a>'
 
     account = accounts[0]
-
     account_id = accounts[0]["id"]
     r = requests.get(f"{BASE_API_URL}/portfolio/{account_id}/summary", verify=False)
     summary = r.json()
@@ -79,6 +98,11 @@ def orders():
 
 @app.route("/order", methods=['POST'])
 def place_order():
+    account_id = get_account_id()
+    if not account_id:
+        flash("Unable to determine account ID", "error")
+        return redirect("/orders")
+
     data = {
         "orders": [
             {
@@ -92,39 +116,55 @@ def place_order():
         ]
     }
 
-    r = requests.post(f"{BASE_API_URL}/iserver/account/{ACCOUNT_ID}/orders", json=data, verify=False)
-
+    r = requests.post(f"{BASE_API_URL}/iserver/account/{account_id}/orders", json=data, verify=False)
     return redirect("/orders")
 
 @app.route("/orders/<order_id>/cancel")
 def cancel_order(order_id):
-    cancel_url = f"{BASE_API_URL}/iserver/account/{ACCOUNT_ID}/order/{order_id}" 
-    r = requests.delete(cancel_url, verify=False)
+    account_id = get_account_id()
+    if not account_id:
+        flash("Unable to determine account ID", "error")
+        return redirect("/orders")
 
+    cancel_url = f"{BASE_API_URL}/iserver/account/{account_id}/order/{order_id}" 
+    r = requests.delete(cancel_url, verify=False)
     return r.json()
 
 @app.route("/portfolio")
 def portfolio():
+    if not check_auth():
+        flash("Please authenticate first", "error")
+        return render_template("portfolio.html", positions=[], auth_error=True)
+
+    account_id = get_account_id()
+    if not account_id:
+        flash("Unable to determine account ID", "error")
+        return render_template("portfolio.html", positions=[], auth_error=True)
+
     try:
-        # First check if we're authenticated
-        auth_check = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
-        if auth_check.status_code != 200:
-            return 'Please authenticate first. <a href="https://localhost:5055">Log in</a>'
+        # Get positions with retry logic
+        for _ in range(3):  # Try up to 3 times
+            positions_response = requests.get(f"{BASE_API_URL}/portfolio/{account_id}/positions/0", verify=False)
+            
+            if positions_response.status_code == 200 and positions_response.content:
+                try:
+                    positions = positions_response.json()
+                    if isinstance(positions, list):
+                        if not positions:
+                            flash("No positions found in your portfolio", "info")
+                        return render_template("portfolio.html", positions=positions, auth_error=False)
+                except ValueError:
+                    time.sleep(1)  # Wait before retry
+                    continue
+            
+            time.sleep(1)  # Wait before retry
 
-        # Get positions
-        r = requests.get(f"{BASE_API_URL}/portfolio/{ACCOUNT_ID}/positions/0", verify=False)
-        
-        if r.status_code == 200 and r.content:
-            try:
-                positions = r.json()
-            except ValueError:
-                positions = []
-        else:
-            positions = []
+        flash("Error fetching positions. Please try again.", "error")
+        return render_template("portfolio.html", positions=[], auth_error=False)
 
-        return render_template("portfolio.html", positions=positions)
     except requests.exceptions.RequestException as e:
-        return 'Error connecting to Interactive Brokers API. Please ensure the gateway is running and you are authenticated.'
+        flash(f"Error connecting to Interactive Brokers API: {str(e)}", "error")
+        return render_template("portfolio.html", positions=[], auth_error=True)
 
 @app.route("/scanner")
 def scanner():

@@ -4,6 +4,19 @@
 
 <h2>Positions</h2>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'error' else 'danger' }}">
+                {{ message }}
+                {% if auth_error %}
+                    <a href="https://localhost:5055" class="alert-link">Click here to authenticate</a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
 {% if positions %}
 <table class="table table-striped">
     <tr>
@@ -37,11 +50,6 @@
     </tr>
     {% endfor %}
 </table>
-{% else %}
-<div class="alert alert-info">
-    No positions found. This could mean either you have no positions or you need to authenticate first.
-    If you haven't authenticated, please <a href="https://localhost:5055" class="alert-link">log in</a>.
-</div>
 {% endif %}
 
 {% endblock %}
