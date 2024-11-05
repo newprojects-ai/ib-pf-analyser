@@ -6,8 +6,8 @@ from webapp.models.watchlist import (
 )
 
 # disable warnings until you install a certificate
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_API_URL = "https://localhost:5055/v1/api"
 ACCOUNT_ID = os.environ.get('IBKR_ACCOUNT_ID')
@@ -16,6 +16,10 @@ os.environ['PYTHONHTTPSVERIFY'] = '0'
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Required for flash messages
+
+@app.template_filter('ctime')
+def timectime(s):
+    return time.ctime(s/1000)
 
 def check_auth():
     """Check if user is authenticated with IBKR"""
@@ -36,10 +40,6 @@ def get_account_id():
     except:
         pass
     return ACCOUNT_ID
-
-@app.template_filter('ctime')
-def timectime(s):
-    return time.ctime(s/1000)
 
 @app.route("/")
 def dashboard():
@@ -228,11 +228,33 @@ def scanner():
 # Watchlist Routes
 @app.route("/watchlists")
 def watchlists():
-    return render_template("watchlists.html", watchlists=get_watchlists(), selected_watchlist=None)
+    sort_by = request.args.get('sort_by')
+    filter_by = {
+        'price_min': request.args.get('price_min'),
+        'price_max': request.args.get('price_max'),
+        'change_min': request.args.get('change_min'),
+        'change_max': request.args.get('change_max')
+    }
+    filter_by = {k: v for k, v in filter_by.items() if v}  # Remove empty filters
+    
+    return render_template(
+        "watchlists.html", 
+        watchlists=get_watchlists(sort_by=sort_by, filter_by=filter_by if filter_by else None), 
+        selected_watchlist=None
+    )
 
 @app.route("/watchlists/<name>")
 def view_watchlist(name):
-    watchlists = get_watchlists()
+    sort_by = request.args.get('sort_by')
+    filter_by = {
+        'price_min': request.args.get('price_min'),
+        'price_max': request.args.get('price_max'),
+        'change_min': request.args.get('change_min'),
+        'change_max': request.args.get('change_max')
+    }
+    filter_by = {k: v for k, v in filter_by.items() if v}  # Remove empty filters
+    
+    watchlists = get_watchlists(sort_by=sort_by, filter_by=filter_by if filter_by else None)
     selected = next((w for w in watchlists["watchlists"] if w["name"] == name), None)
     search_results = request.args.get("search_results", None)
     return render_template("watchlists.html", watchlists=watchlists, selected_watchlist=selected, search_results=search_results)

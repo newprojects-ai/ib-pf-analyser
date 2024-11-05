@@ -34,12 +34,52 @@
         {% if selected_watchlist %}
         <h2>{{ selected_watchlist['name'] }}</h2>
         
-        <form action="{{ url_for('search_for_watchlist', watchlist_name=selected_watchlist['name']) }}" method="get" class="mb-4">
-            <div class="input-group">
-                <input type="text" name="symbol" class="form-control" placeholder="Search symbol to add (e.g., AAPL)">
-                <button type="submit" class="btn btn-primary">Search</button>
+        <div class="row mb-4">
+            <div class="col">
+                <form action="{{ url_for('search_for_watchlist', watchlist_name=selected_watchlist['name']) }}" method="get" class="mb-3">
+                    <div class="input-group">
+                        <input type="text" name="symbol" class="form-control" placeholder="Search symbol to add (e.g., AAPL)">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col">
+                <form action="{{ url_for('view_watchlist', name=selected_watchlist['name']) }}" method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Sort By</label>
+                        <select name="sort_by" class="form-select" onchange="this.form.submit()">
+                            <option value="">None</option>
+                            <option value="symbol" {% if request.args.get('sort_by') == 'symbol' %}selected{% endif %}>Symbol</option>
+                            <option value="price" {% if request.args.get('sort_by') == 'price' %}selected{% endif %}>Price</option>
+                            <option value="price_change_pct" {% if request.args.get('sort_by') == 'price_change_pct' %}selected{% endif %}>% Change</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Price Min</label>
+                        <input type="number" name="price_min" class="form-control" value="{{ request.args.get('price_min', '') }}" step="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Price Max</label>
+                        <input type="number" name="price_max" class="form-control" value="{{ request.args.get('price_max', '') }}" step="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Change Min %</label>
+                        <input type="number" name="change_min" class="form-control" value="{{ request.args.get('change_min', '') }}" step="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Change Max %</label>
+                        <input type="number" name="change_max" class="form-control" value="{{ request.args.get('change_max', '') }}" step="0.01">
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         {% if search_results %}
         <h3>Search Results</h3>
@@ -69,6 +109,14 @@
                     <a href="/contract/{{ instrument['conid'] }}/365d" class="text-decoration-none">
                         <strong>{{ instrument['symbol'] }}</strong> - {{ instrument['company_name'] }}
                     </a>
+                    <div class="mt-1">
+                        <span class="badge bg-primary">${{ "%.2f"|format(instrument.get('price', 0)) }}</span>
+                        <span class="badge {% if instrument.get('price_change_pct', 0) >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ "%.2f"|format(instrument.get('price_change_pct', 0)) }}%
+                        </span>
+                        <small class="text-muted">Vol: {{ instrument.get('volume', 0)|int }}</small>
+                        <small class="text-muted">Updated: {{ instrument.get('last_update', '') }}</small>
+                    </div>
                 </div>
                 <a href="{{ url_for('remove_from_watchlist_route', watchlist_name=selected_watchlist['name'], instrument_id=instrument['conid']) }}" 
                    class="btn btn-danger btn-sm">Remove</a>
@@ -82,5 +130,12 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+    // Auto-refresh prices every 30 seconds
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+</script>
 
 {% endblock %}
