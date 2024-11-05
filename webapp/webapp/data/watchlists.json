@@ -1,0 +1,23 @@
+{
+  "watchlists": [
+    {
+      "name": "Test",
+      "instruments": [
+        {
+          "symbol": "AAPL",
+          "conid": "265598",
+          "company_name": "APPLE INC"
+        },
+        {
+          "symbol": "NVDA",
+          "conid": "4815747",
+          "company_name": "NVIDIA CORP (NASDAQ)"
+        }
+      ]
+    },
+    {
+      "name": "newtest",
+      "instruments": []
+    }
+  ]
+}

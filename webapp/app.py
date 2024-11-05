@@ -1,5 +1,9 @@
 import requests, time, os
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for, flash
+from webapp.models.watchlist import (
+    get_watchlists, create_watchlist, add_to_watchlist, 
+    remove_from_watchlist, delete_watchlist
+)
 
 # disable warnings until you install a certificate
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -11,11 +15,11 @@ ACCOUNT_ID = os.environ['IBKR_ACCOUNT_ID']
 os.environ['PYTHONHTTPSVERIFY'] = '0'
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)  # Required for flash messages
 
 @app.template_filter('ctime')
 def timectime(s):
     return time.ctime(s/1000)
-
 
 @app.route("/")
 def dashboard():
@@ -33,7 +37,6 @@ def dashboard():
     
     return render_template("dashboard.html", account=account, summary=summary)
 
-
 @app.route("/lookup")
 def lookup():
     symbol = request.args.get('symbol', None)
@@ -41,12 +44,10 @@ def lookup():
 
     if symbol is not None:
         r = requests.get(f"{BASE_API_URL}/iserver/secdef/search?symbol={symbol}&name=true", verify=False)
-
         response = r.json()
         stocks = response
 
     return render_template("lookup.html", stocks=stocks)
-
 
 @app.route("/contract/<contract_id>/<period>")
 def contract(contract_id, period='5d', bar='1d'):
@@ -64,16 +65,17 @@ def contract(contract_id, period='5d', bar='1d'):
 
     return render_template("contract.html", price_history=price_history, contract=contract)
 
-
 @app.route("/orders")
 def orders():
-    r = requests.get(f"{BASE_API_URL}/iserver/account/orders", verify=False)
-    print(r.content)
-    orders = r.json()["orders"]
-    
-    # place order code
+    try:
+        r = requests.get(f"{BASE_API_URL}/iserver/account/orders", verify=False)
+        if r.status_code == 200:
+            orders = r.json().get("orders", [])
+        else:
+            orders = []
+    except Exception as e:
+        orders = []
     return render_template("orders.html", orders=orders)
-
 
 @app.route("/order", methods=['POST'])
 def place_order():
@@ -101,15 +103,28 @@ def cancel_order(order_id):
 
     return r.json()
 
-
 @app.route("/portfolio")
 def portfolio():
-    r = requests.get(f"{BASE_API_URL}/portfolio/{ACCOUNT_ID}/positions/0", verify=False)
-    positions = r.json()
+    try:
+        # First check if we're authenticated
+        auth_check = requests.get(f"{BASE_API_URL}/portfolio/accounts", verify=False)
+        if auth_check.status_code != 200:
+            return 'Please authenticate first. <a href="https://localhost:5055">Log in</a>'
 
-    # return my positions, how much cash i have in this account
-    return render_template("portfolio.html", positions=positions)
+        # Get positions
+        r = requests.get(f"{BASE_API_URL}/portfolio/{ACCOUNT_ID}/positions/0", verify=False)
+        
+        if r.status_code == 200 and r.content:
+            try:
+                positions = r.json()
+            except ValueError:
+                positions = []
+        else:
+            positions = []
 
+        return render_template("portfolio.html", positions=positions)
+    except requests.exceptions.RequestException as e:
+        return 'Error connecting to Interactive Brokers API. Please ensure the gateway is running and you are authenticated.'
 
 @app.route("/scanner")
 def scanner():
@@ -143,7 +158,6 @@ def scanner():
     for item in params['location_tree']:
         scanner_map[item['type']]['locations'] = item['locations']
 
-
     submitted = request.args.get("submitted", "")
     selected_instrument = request.args.get("instrument", "")
     location = request.args.get("location", "")
@@ -170,3 +184,59 @@ def scanner():
         scan_results = r.json()
 
     return render_template("scanner.html", params=params, scanner_map=scanner_map, filter_map=filter_map, scan_results=scan_results)
+
+# Watchlist Routes
+@app.route("/watchlists")
+def watchlists():
+    return render_template("watchlists.html", watchlists=get_watchlists(), selected_watchlist=None)
+
+@app.route("/watchlists/<name>")
+def view_watchlist(name):
+    watchlists = get_watchlists()
+    selected = next((w for w in watchlists["watchlists"] if w["name"] == name), None)
+    search_results = request.args.get("search_results", None)
+    return render_template("watchlists.html", watchlists=watchlists, selected_watchlist=selected, search_results=search_results)
+
+@app.route("/watchlists/create", methods=["POST"])
+def create_watchlist_route():
+    name = request.form.get("watchlist_name")
+    if name:
+        create_watchlist(name)
+    return redirect(url_for("watchlists"))
+
+@app.route("/watchlists/<watchlist_name>/search")
+def search_for_watchlist(watchlist_name):
+    symbol = request.args.get('symbol', None)
+    search_results = []
+    
+    if symbol:
+        r = requests.get(f"{BASE_API_URL}/iserver/secdef/search?symbol={symbol}&name=true", verify=False)
+        search_results = r.json()
+    
+    watchlists = get_watchlists()
+    selected = next((w for w in watchlists["watchlists"] if w["name"] == watchlist_name), None)
+    
+    return render_template("watchlists.html", 
+                         watchlists=watchlists, 
+                         selected_watchlist=selected, 
+                         search_results=search_results)
+
+@app.route("/watchlists/<watchlist_name>/add", methods=["POST"])
+def add_to_watchlist_route(watchlist_name):
+    instrument = {
+        "symbol": request.form.get("symbol"),
+        "conid": request.form.get("conid"),
+        "company_name": request.form.get("company_name")
+    }
+    add_to_watchlist(watchlist_name, instrument)
+    return redirect(url_for("view_watchlist", name=watchlist_name))
+
+@app.route("/watchlists/<watchlist_name>/remove/<instrument_id>")
+def remove_from_watchlist_route(watchlist_name, instrument_id):
+    remove_from_watchlist(watchlist_name, instrument_id)
+    return redirect(url_for("view_watchlist", name=watchlist_name))
+
+@app.route("/watchlists/<name>/delete")
+def delete_watchlist_route(name):
+    delete_watchlist(name)
+    return redirect(url_for("watchlists"))

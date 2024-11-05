@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-md-4">
+        <h2>Watchlists</h2>
+        
+        <form action="{{ url_for('create_watchlist_route') }}" method="post" class="mb-4">
+            <div class="input-group">
+                <input type="text" name="watchlist_name" class="form-control" placeholder="New Watchlist Name" required>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+        </form>
+
+        <div class="list-group">
+            {% for watchlist in watchlists["watchlists"] %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <a href="{{ url_for('view_watchlist', name=watchlist['name']) }}" class="text-decoration-none">
+                    {{ watchlist['name'] }}
+                    <span class="badge bg-secondary rounded-pill">{{ watchlist['instruments']|length }}</span>
+                </a>
+                <a href="{{ url_for('delete_watchlist_route', name=watchlist['name']) }}" 
+                   class="btn btn-danger btn-sm"
+                   onclick="return confirm('Are you sure you want to delete this watchlist?')">
+                    Delete
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        {% if selected_watchlist %}
+        <h2>{{ selected_watchlist['name'] }}</h2>
+        
+        <form action="{{ url_for('search_for_watchlist', watchlist_name=selected_watchlist['name']) }}" method="get" class="mb-4">
+            <div class="input-group">
+                <input type="text" name="symbol" class="form-control" placeholder="Search symbol to add (e.g., AAPL)">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        {% if search_results %}
+        <h3>Search Results</h3>
+        <div class="list-group mb-4">
+            {% for stock in search_results %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ stock['symbol'] }}</strong> - {{ stock['companyName'] }}
+                </div>
+                <form action="{{ url_for('add_to_watchlist_route', watchlist_name=selected_watchlist['name']) }}" method="post" style="display: inline;">
+                    <input type="hidden" name="symbol" value="{{ stock['symbol'] }}">
+                    <input type="hidden" name="conid" value="{{ stock['conid'] }}">
+                    <input type="hidden" name="company_name" value="{{ stock['companyName'] }}">
+                    <button type="submit" class="btn btn-success btn-sm">Add</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if selected_watchlist['instruments'] %}
+        <h3>Instruments</h3>
+        <div class="list-group">
+            {% for instrument in selected_watchlist['instruments'] %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <a href="/contract/{{ instrument['conid'] }}/365d" class="text-decoration-none">
+                        <strong>{{ instrument['symbol'] }}</strong> - {{ instrument['company_name'] }}
+                    </a>
+                </div>
+                <a href="{{ url_for('remove_from_watchlist_route', watchlist_name=selected_watchlist['name'], instrument_id=instrument['conid']) }}" 
+                   class="btn btn-danger btn-sm">Remove</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No instruments in this watchlist yet.</p>
+        {% endif %}
+
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

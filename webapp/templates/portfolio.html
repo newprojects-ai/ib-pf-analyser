@@ -4,6 +4,7 @@
 
 <h2>Positions</h2>
 
+{% if positions %}
 <table class="table table-striped">
     <tr>
         <th>Instrument</th>
@@ -36,5 +37,11 @@
     </tr>
     {% endfor %}
 </table>
+{% else %}
+<div class="alert alert-info">
+    No positions found. This could mean either you have no positions or you need to authenticate first.
+    If you haven't authenticated, please <a href="https://localhost:5055" class="alert-link">log in</a>.
+</div>
+{% endif %}
 
 {% endblock %}
