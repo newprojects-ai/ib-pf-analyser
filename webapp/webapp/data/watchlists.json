@@ -6,18 +6,132 @@
         {
           "symbol": "AAPL",
           "conid": "265598",
-          "company_name": "APPLE INC"
+          "company_name": "APPLE INC",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:08"
         },
         {
           "symbol": "NVDA",
           "conid": "4815747",
-          "company_name": "NVIDIA CORP (NASDAQ)"
+          "company_name": "NVIDIA CORP (NASDAQ)",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:08"
         }
       ]
     },
     {
       "name": "newtest",
       "instruments": []
+    },
+    {
+      "name": "Upload_test",
+      "instruments": [
+        {
+          "company_name": "META PLATFORMS INC-CLASS A",
+          "conid": "107113386",
+          "description": "NASDAQ",
+          "symbol": "META",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:08"
+        },
+        {
+          "company_name": "TESLA INC",
+          "conid": "76792991",
+          "description": "NASDAQ",
+          "symbol": "TSLA",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:08"
+        },
+        {
+          "company_name": "IJK NAV SYMBOL (AMEX)",
+          "conid": "16513562",
+          "description": null,
+          "symbol": "NNK.NV",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:08"
+        },
+        {
+          "company_name": "SUPER MICRO COMPUTER INC",
+          "conid": "731466419",
+          "description": "NASDAQ",
+          "symbol": "SMCI",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:08"
+        },
+        {
+          "company_name": "COINBASE GLOBAL INC -CLASS A",
+          "conid": "481691285",
+          "description": "NASDAQ",
+          "symbol": "COIN",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:08"
+        },
+        {
+          "company_name": "JPMORGAN CHASE & CO",
+          "conid": "1520593",
+          "description": "NYSE",
+          "symbol": "JPM",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:09"
+        },
+        {
+          "company_name": "Bitcoin cryptocurrency (ZEROHASH)",
+          "conid": "541686651",
+          "description": null,
+          "symbol": null,
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:09"
+        },
+        {
+          "company_name": "FTSE 4Good IBEX Index (MEFFRV)",
+          "conid": "110216636",
+          "description": null,
+          "symbol": "INDN",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:09"
+        },
+        {
+          "company_name": "Dow Jones Transportation Average",
+          "conid": "453958493",
+          "description": "CME",
+          "symbol": "DJT",
+          "price": 0,
+          "price_change": 0,
+          "price_change_pct": 0,
+          "volume": 0,
+          "last_update": "2024-11-06 11:52:09"
+        }
+      ]
     }
   ]
 }
